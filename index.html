@@ -781,8 +781,11 @@ onAuthStateChanged(auth,async user=>{
   }
   // Recheck that this user is still the active Firebase session after awaiting Firestore.
   if(!auth.currentUser||auth.currentUser.uid!==user.uid)return;
-  try{if(typeof renderAll==='function')renderAll();if(typeof updateHomeGreeting==='function')updateHomeGreeting(localStorage.getItem('syd_display_name')||user.displayName||'');}catch(e){}
+  // V81 AUDIT FIX: mark this as a returning authenticated session BEFORE rendering the greeting.
+  // Previously updateHomeGreeting ran first, so it saw __sydReturningUser !== true and
+  // permanently rendered the first-visit welcome text until another event refreshed it.
   window.__sydReturningUser=true;
+  try{if(typeof renderAll==='function')renderAll();if(typeof updateHomeGreeting==='function')updateHomeGreeting(localStorage.getItem('syd_display_name')||user.displayName||'');}catch(e){}
   const intro=document.getElementById('sydIntro'),panel=document.getElementById('sydAccountPanel');
   if(intro)intro.style.display='none';if(panel)panel.classList.remove('open');document.body.classList.remove('onboarding-active');
  }catch(e){
