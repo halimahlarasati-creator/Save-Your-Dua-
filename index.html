@@ -631,9 +631,26 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
       const authenticatedEmail=String((authResult.user&&authResult.user.email)||email).trim().toLowerCase();
       const authenticatedName=String((authResult.profile&&authResult.profile.name)||(authResult.user&&authResult.user.name)||displayName||'').trim();
       const authenticatedGender=((authResult.profile&&authResult.profile.gender)||(authResult.user&&authResult.user.gender)||gender)==='brother'?'brother':'sister';
-      if(authResult.cloudState){try{const cloud=authResult.cloudState;if(Array.isArray(cloud.duas)&&Array.isArray(cloud.collections)&&Array.isArray(cloud.notes)){if(window.__sydSetAppState)window.__sydSetAppState(cloud);}}catch(_){}}
-      else if(window.__sydActivateAccountState){const localAccountState=window.__sydActivateAccountState(authenticatedEmail);if(!localAccountState&&window.__sydResetToFreshState)window.__sydResetToFreshState();}
-      else if(window.__sydResetToFreshState)window.__sydResetToFreshState();
+      // V78 SAFETY: never sync a possibly unrelated/guest state into a signed-in account.
+      // If Firestore has an appData document but its state shape is unexpected, stop and
+      // preserve the cloud document instead of falling through to a blank/local state.
+      const cloud=authResult.cloudState;
+      const validCloud=!!cloud&&Array.isArray(cloud.duas)&&Array.isArray(cloud.collections)&&Array.isArray(cloud.notes);
+      if(validCloud){
+        if(window.__sydSetAppState)window.__sydSetAppState(cloud);
+      }else if(authResult.hasCloudData){
+        try{if(window.__sydFirebaseSignOut)await window.__sydFirebaseSignOut();}catch(_){}
+        window.__sydFirebaseUser=null;
+        showError(lang==='id'?'Data akun ditemukan, tetapi formatnya tidak dikenali. Data cloud tidak diubah. Periksa pemulihan data sebelum mencoba login lagi.':'Account data exists but its format is not recognized. Cloud data was not changed. Please recover the data before trying again.');
+        return;
+      }else{
+        const localAccountState=window.__sydActivateAccountState?window.__sydActivateAccountState(authenticatedEmail):null;
+        if(localAccountState){
+          const validLocal=Array.isArray(localAccountState.duas)&&Array.isArray(localAccountState.collections)&&Array.isArray(localAccountState.notes);
+          if(!validLocal){try{if(window.__sydFirebaseSignOut)await window.__sydFirebaseSignOut();}catch(_){};showError(lang==='id'?'Cadangan lokal akun tidak valid. Data cloud tidak diubah.':'The local account backup is invalid. Cloud data was not changed.');return;}
+          if(window.__sydSetAppState)window.__sydSetAppState(localAccountState);
+        }else if(window.__sydResetToFreshState)window.__sydResetToFreshState();
+      }
       window.__sydReturningUser=accountMode==='login';
       try{localStorage.setItem('syd_local_profile',JSON.stringify({name:authenticatedName,gender:authenticatedGender,email:authenticatedEmail,hasAccount:true}));localStorage.setItem('syd_display_name',authenticatedName);localStorage.setItem('syd_gender',authenticatedGender);localStorage.setItem('syd_last_email',authenticatedEmail);localStorage.setItem('syd_session_active','1');localStorage.setItem('saveYourDua.account.v1.'+encodeURIComponent(authenticatedEmail),JSON.stringify(window.__sydGetAppState?window.__sydGetAppState():{}));}catch(storageErr){/* keep session usable for this page even if local storage is blocked */}
       try{await window.__sydCloudSave(window.__sydGetAppState?window.__sydGetAppState():{});}catch(syncErr){showError((lang==='id'?'Login berhasil, tetapi sinkronisasi data belum berhasil: ':'Signed in, but cloud sync failed: ')+(syncErr.message||'Try again later.'));return;}
@@ -721,7 +738,7 @@ window.__sydFirebaseAccount=async ({mode,email,password,name,gender})=>{
  const snap=await getDoc(appDataRef);
  if(snap.exists()){
   const cloudState=(snap.data()||{}).state||null;
-  return {user:{uid:user.uid,email:user.email,name:resolvedName,gender:resolvedGender},cloudState,hasCloudData:!!cloudState,profile:{name:resolvedName,gender:resolvedGender,email:user.email}};
+  return {user:{uid:user.uid,email:user.email,name:resolvedName,gender:resolvedGender},cloudState,hasCloudData:true,profile:{name:resolvedName,gender:resolvedGender,email:user.email}};
  }
  let localState=null;
  try{localState=JSON.parse(localStorage.getItem('saveYourDua.account.v1.'+encodeURIComponent(String(user.email||'').trim().toLowerCase()))||'null');}catch(e){}
@@ -729,6 +746,10 @@ window.__sydFirebaseAccount=async ({mode,email,password,name,gender})=>{
 };
 window.__sydCloudSave=async state=>{
  const user=auth.currentUser;if(!user)return;
+ // V78 SAFETY: reject malformed states; do not replace valid account data with a blank/guest shape.
+ if(!state||!Array.isArray(state.duas)||!Array.isArray(state.collections)||!Array.isArray(state.notes)){
+  throw new Error('State aplikasi tidak valid; data cloud tidak diubah.');
+ }
  // Firestore documents have a 1 MiB limit; avoid sending oversized local photo data.
  const payload=JSON.parse(JSON.stringify(state));
  const ref=doc(db,'users',user.uid,'private','appData');
