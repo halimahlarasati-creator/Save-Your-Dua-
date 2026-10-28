@@ -617,25 +617,30 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
       if(password.length<8){showError(lang==='id'?'Kata sandi minimal 8 karakter.':'Password must be at least 8 characters.');passwordEl.focus();return;}
       let old=null; try{old=JSON.parse(localStorage.getItem('syd_local_profile')||'null')}catch(_){ }
       // Online login must be validated by Firebase, not blocked by browser-local profile data.
-      const gender=accountMode==='signup'?(genderEl.value||'sister'):((old&&old.gender)||localStorage.getItem('syd_gender')||'sister');
-      const displayName=accountMode==='signup'?name:((old&&old.name)||localStorage.getItem('syd_display_name')||'');
+      // For login, don't pass stale browser-local profile data; Firebase UID profile is authoritative.
+      const gender=accountMode==='signup'?(genderEl.value||'sister'):'sister';
+      const displayName=accountMode==='signup'?name:'';
       if(!window.__sydFirebaseAccount){showError(lang==='id'?'Firebase belum siap. Periksa koneksi lalu muat ulang halaman.':'Firebase is not ready. Check your connection and reload the page.');return;}
       btn.disabled=true;btn.textContent=lang==='id'?'Menghubungkan…':'Connecting…';
       let authResult;
       try{authResult=await Promise.race([window.__sydFirebaseAccount({mode:accountMode,email,password,name:displayName,gender}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Koneksi Firebase terlalu lama. Periksa internet lalu muat ulang halaman.')),20000))]);}
       catch(firebaseErr){btn.disabled=false;btn.textContent=lang==='id'?'Lanjutkan':'Continue';const code=firebaseErr&&firebaseErr.code;const messages={'auth/email-already-in-use':lang==='id'?'Email ini sudah terdaftar. Silakan masuk.':'This email is already registered. Please log in.','auth/invalid-credential':lang==='id'?'Email atau kata sandi salah.':'Incorrect email or password.','auth/weak-password':lang==='id'?'Kata sandi terlalu lemah.':'Password is too weak.','auth/invalid-email':lang==='id'?'Format email tidak valid.':'Email address is invalid.','auth/network-request-failed':lang==='id'?'Koneksi gagal. Periksa internet lalu coba lagi.':'Network error. Check your internet connection and try again.','auth/operation-not-allowed':lang==='id'?'Metode Email/Password belum diaktifkan di Firebase.':'Email/Password sign-in is not enabled in Firebase.'};showError(messages[code]||((lang==='id'?'Firebase gagal: ':'Firebase error: ')+(firebaseErr.message||code||'unknown error')));return;}
       btn.disabled=false;btn.textContent=lang==='id'?'Lanjutkan':'Continue';
+      // Use the authenticated account's Firestore profile, not stale values from the prior local session.
+      const authenticatedEmail=String((authResult.user&&authResult.user.email)||email).trim().toLowerCase();
+      const authenticatedName=String((authResult.profile&&authResult.profile.name)||(authResult.user&&authResult.user.name)||displayName||'').trim();
+      const authenticatedGender=((authResult.profile&&authResult.profile.gender)||(authResult.user&&authResult.user.gender)||gender)==='brother'?'brother':'sister';
       if(authResult.cloudState){try{const cloud=authResult.cloudState;if(Array.isArray(cloud.duas)&&Array.isArray(cloud.collections)&&Array.isArray(cloud.notes)){if(window.__sydSetAppState)window.__sydSetAppState(cloud);}}catch(_){}}
-      else if(window.__sydActivateAccountState){const localAccountState=window.__sydActivateAccountState(email);if(!localAccountState&&window.__sydResetToFreshState)window.__sydResetToFreshState();}
+      else if(window.__sydActivateAccountState){const localAccountState=window.__sydActivateAccountState(authenticatedEmail);if(!localAccountState&&window.__sydResetToFreshState)window.__sydResetToFreshState();}
       else if(window.__sydResetToFreshState)window.__sydResetToFreshState();
       window.__sydReturningUser=accountMode==='login';
-      try{localStorage.setItem('syd_local_profile',JSON.stringify({name:displayName,gender,email,hasAccount:true}));localStorage.setItem('syd_display_name',displayName);localStorage.setItem('syd_gender',gender);localStorage.setItem('syd_last_email',email);localStorage.setItem('syd_session_active','1');localStorage.setItem('saveYourDua.account.v1.'+encodeURIComponent(String(email).trim().toLowerCase()),JSON.stringify(window.__sydGetAppState?window.__sydGetAppState():{}));}catch(storageErr){/* keep session usable for this page even if local storage is blocked */}
+      try{localStorage.setItem('syd_local_profile',JSON.stringify({name:authenticatedName,gender:authenticatedGender,email:authenticatedEmail,hasAccount:true}));localStorage.setItem('syd_display_name',authenticatedName);localStorage.setItem('syd_gender',authenticatedGender);localStorage.setItem('syd_last_email',authenticatedEmail);localStorage.setItem('syd_session_active','1');localStorage.setItem('saveYourDua.account.v1.'+encodeURIComponent(authenticatedEmail),JSON.stringify(window.__sydGetAppState?window.__sydGetAppState():{}));}catch(storageErr){/* keep session usable for this page even if local storage is blocked */}
       try{await window.__sydCloudSave(window.__sydGetAppState?window.__sydGetAppState():{});}catch(syncErr){showError((lang==='id'?'Login berhasil, tetapi sinkronisasi data belum berhasil: ':'Signed in, but cloud sync failed: ')+(syncErr.message||'Try again later.'));return;}
       // Navigate after Firebase authentication and initial cloud sync.
       document.getElementById('sydIntro').style.display='none';
       document.getElementById('sydAccountPanel').classList.remove('open');
       document.body.classList.remove('onboarding-active');
-      try{updateHomeGreeting(displayName)}catch(greetErr){const box=document.getElementById('homeGreeting');if(box){const lang=document.getElementById('sydIntroLanguage').value||'en';const addr=gender==='brother'?'brother':'sister';box.innerHTML='<p class="greeting-title">Assalamu’alaikum 💕 <span class="greeting-name"></span></p><p class="tiny muted" style="margin:0"></p>';box.querySelector('.greeting-name').textContent=displayName;box.querySelector('.tiny').textContent=accountMode==='login'?(lang==='id'?'Aku seneng deh kamu balik lagi, '+addr+' ♡':'I’m glad you’re back, '+addr+' ♡'):(lang==='id'?'Selamat datang, ya. Semoga kamu betah menyimpan doa-doamu di sini.':'Welcome to your little dua space.');}}
+      try{updateHomeGreeting(authenticatedName)}catch(greetErr){const box=document.getElementById('homeGreeting');if(box){const lang=document.getElementById('sydIntroLanguage').value||'en';const addr=authenticatedGender==='brother'?'brother':'sister';box.innerHTML='<p class="greeting-title">Assalamu’alaikum 💕 <span class="greeting-name"></span></p><p class="tiny muted" style="margin:0"></p>';box.querySelector('.greeting-name').textContent=authenticatedName;box.querySelector('.tiny').textContent=accountMode==='login'?(lang==='id'?'Aku seneng deh kamu balik lagi, '+addr+' ♡':'I’m glad you’re back, '+addr+' ♡'):(lang==='id'?'Selamat datang, ya. Semoga kamu betah menyimpan doa-doamu di sini.':'Welcome to your little dua space.');}}
       window.scrollTo(0,0);
     } catch(err) {
       showError((lang==='id'?'Belum bisa melanjutkan: ':'Could not continue: ')+(err&&err.message?err.message:'unexpected error'));
@@ -689,13 +694,37 @@ window.__sydFirebaseAccount=async ({mode,email,password,name,gender})=>{
   credential=await createUserWithEmailAndPassword(auth,email,password);
   if(name)await updateProfile(credential.user,{displayName:name});
   await setDoc(doc(db,'users',credential.user.uid),{name,gender,email:credential.user.email,createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true});
- }else{credential=await signInWithEmailAndPassword(auth,email,password);}
- const user=credential.user, ref=doc(db,'users',user.uid,'private','appData');
- const snap=await getDoc(ref);
- if(snap.exists()) return {user:{uid:user.uid,email:user.email,name:user.displayName||name,gender},cloudState:snap.data().state||null,hasCloudData:true};
- await setDoc(doc(db,'users',user.uid),{name:name||user.displayName||'',gender:gender||'sister',email:user.email,updatedAt:serverTimestamp()},{merge:true});
- let localState=null;try{localState=JSON.parse(localStorage.getItem('saveYourDua.account.v1.'+encodeURIComponent(String(user.email||'').trim().toLowerCase()))||'null');}catch(e){}
- return {user:{uid:user.uid,email:user.email,name:user.displayName||name,gender},cloudState:localState&&Array.isArray(localState.duas)&&Array.isArray(localState.collections)&&Array.isArray(localState.notes)?localState:null,hasCloudData:false};
+ }else{
+  // Close any previous authenticated session before intentionally switching accounts.
+  if(auth.currentUser) await signOut(auth);
+  credential=await signInWithEmailAndPassword(auth,email,password);
+ }
+ const user=credential.user;
+ const requestedEmail=String(email||'').trim().toLowerCase();
+ const authenticatedEmail=String(user.email||'').trim().toLowerCase();
+ if(mode!=='signup' && authenticatedEmail!==requestedEmail){
+  await signOut(auth);
+  throw new Error('Firebase returned a different account than the email entered. Please try signing in again.');
+ }
+ // Always resolve profile by the authenticated Firebase UID; never trust the previous
+ // browser's cached name/gender when switching accounts on the same device.
+ const profileRef=doc(db,'users',user.uid);
+ const profileSnap=await getDoc(profileRef);
+ const profile=profileSnap.exists()?(profileSnap.data()||{}):{};
+ const resolvedName=String(profile.name||user.displayName||((mode==='signup')?name:'')||'').trim();
+ const resolvedGender=(profile.gender==='brother'||profile.gender==='sister')?profile.gender:((mode==='signup'&&(gender==='brother'||gender==='sister'))?gender:'sister');
+ if(!profileSnap.exists()||!profile.email){
+  await setDoc(profileRef,{name:resolvedName,gender:resolvedGender,email:user.email,updatedAt:serverTimestamp()},{merge:true});
+ }
+ const appDataRef=doc(db,'users',user.uid,'private','appData');
+ const snap=await getDoc(appDataRef);
+ if(snap.exists()){
+  const cloudState=(snap.data()||{}).state||null;
+  return {user:{uid:user.uid,email:user.email,name:resolvedName,gender:resolvedGender},cloudState,hasCloudData:!!cloudState,profile:{name:resolvedName,gender:resolvedGender,email:user.email}};
+ }
+ let localState=null;
+ try{localState=JSON.parse(localStorage.getItem('saveYourDua.account.v1.'+encodeURIComponent(String(user.email||'').trim().toLowerCase()))||'null');}catch(e){}
+ return {user:{uid:user.uid,email:user.email,name:resolvedName,gender:resolvedGender},cloudState:localState&&Array.isArray(localState.duas)&&Array.isArray(localState.collections)&&Array.isArray(localState.notes)?localState:null,hasCloudData:false,profile:{name:resolvedName,gender:resolvedGender,email:user.email}};
 };
 window.__sydCloudSave=async state=>{
  const user=auth.currentUser;if(!user)return;
