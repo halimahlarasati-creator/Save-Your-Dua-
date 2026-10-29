@@ -168,18 +168,19 @@ let state=load();
 if(!['id','en'].includes(state.language)){state.language='en';try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}}
 // V75: isolate guest data in a clean namespace, replace shared state on guest entry, and keep guest saves out of Firebase cloud sync.
 const GUEST_STORAGE_KEY='saveYourDua.guest.v5'; // V86 privacy isolation: use a new empty guest namespace so previously contaminated guest data cannot appear. Older guest data remains in browser storage as a recoverable backup.
-function sydAccountStorageKey(email){return 'saveYourDua.account.v1.'+encodeURIComponent(String(email||'').trim().toLowerCase());}
+function sydAccountStorageKey(uid){return 'saveYourDua.account.uid.v2.'+encodeURIComponent(String(uid||'').trim());}
+function sydLegacyEmailStorageKey(email){return 'saveYourDua.account.v1.'+encodeURIComponent(String(email||'').trim().toLowerCase());}
 function sydValidState(d){return !!(d&&Array.isArray(d.duas)&&Array.isArray(d.collections)&&Array.isArray(d.notes));}
 function sydFreshState(){return {duas:[],collections:clone(defaultCollections),notes:[],language:state&&state.language||'en',readIds:[],profile:null};}
 function sydReadScoped(key){try{const d=JSON.parse(localStorage.getItem(key)||'null');if(sydValidState(d))return d;}catch(e){}return null;}
 function sydWriteScoped(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(e){console.warn('Could not save scoped data',e);return false;}}
 function sydIsGuest(){try{return localStorage.getItem('syd_session_active')!=='1'&&!window.__sydFirebaseUser;}catch(e){return !window.__sydFirebaseUser;}}
-function sydPersistScopedState(){try{if(sydIsGuest())sydWriteScoped(GUEST_STORAGE_KEY,state);else{const email=(window.__sydFirebaseUser&&window.__sydFirebaseUser.email)||localStorage.getItem('syd_last_email')||'';if(email)sydWriteScoped(sydAccountStorageKey(email),state);}}catch(e){}}
+function sydPersistScopedState(){try{if(sydIsGuest())sydWriteScoped(GUEST_STORAGE_KEY,state);else{const user=window.__sydFirebaseUser;if(user&&user.uid)sydWriteScoped(sydAccountStorageKey(user.uid),state);}}catch(e){}}
 window.__sydGetAppState=()=>state;
 window.__sydSetAppState=(next)=>{if(next&&Array.isArray(next.duas)&&Array.isArray(next.collections)&&Array.isArray(next.notes)){state={...next};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;}throw new Error("Cloud data format is invalid.");};
 window.__sydResetToFreshState=()=>{state={duas:[],collections:clone(defaultCollections),notes:[],language:state&&state.language||'en',readIds:[],profile:null};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;};
 window.__sydActivateGuestState=()=>{const guest=sydReadScoped(GUEST_STORAGE_KEY)||sydFreshState();state={...guest,profile:null};try{localStorage.setItem('syd_session_active','0');localStorage.removeItem('syd_display_name');localStorage.removeItem('syd_gender');localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}sydWriteScoped(GUEST_STORAGE_KEY,state);try{if(typeof renderAll==='function')renderAll();if(typeof updateHomeGreeting==='function')updateHomeGreeting('');}catch(e){console.warn('Guest view refresh failed',e)}return state;};
-window.__sydActivateAccountState=(email)=>{const saved=sydReadScoped(sydAccountStorageKey(email));if(saved){state={...saved};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;}return null;};
+window.__sydActivateAccountState=(uid,email)=>{let saved=uid?sydReadScoped(sydAccountStorageKey(uid)):null;/* One-time compatibility migration: only consult this email's legacy cache when the UID cache is absent. */if(!saved&&email){saved=sydReadScoped(sydLegacyEmailStorageKey(email));if(saved&&uid)sydWriteScoped(sydAccountStorageKey(uid),saved);}if(saved){state={...saved};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;}return null;};
 try{if(!state.profile){const n=localStorage.getItem('syd_display_name')||'',g=localStorage.getItem('syd_gender')||'',em=localStorage.getItem('syd_last_email')||'';if(n||g||em)state.profile={name:n,gender:g||'sister',email:em,hasAccount:localStorage.getItem('syd_session_active')==='1'};}}catch(e){}
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));sydPersistScopedState();if(!sydIsGuest()&&window.__sydFirebaseUser&&window.__sydCloudSave)window.__sydCloudSave(state).catch(err=>console.warn('Cloud sync pending:',err));return true}catch(e){toast('Could not save. Your browser storage may be full.');return false}}
 function compressPhoto(file){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>{const max=800,scale=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*scale);c.height=Math.round(im.height*scale);c.getContext('2d').drawImage(im,0,0,c.width,c.height);resolve(c.toDataURL('image/jpeg',.62));};im.onerror=reject;im.src=URL.createObjectURL(file);});}
@@ -648,7 +649,7 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
         showError(lang==='id'?'Data akun ditemukan, tetapi formatnya tidak dikenali. Data cloud tidak diubah. Periksa pemulihan data sebelum mencoba login lagi.':'Account data exists but its format is not recognized. Cloud data was not changed. Please recover the data before trying again.');
         return;
       }else{
-        const localAccountState=window.__sydActivateAccountState?window.__sydActivateAccountState(authenticatedEmail):null;
+        const localAccountState=window.__sydActivateAccountState?window.__sydActivateAccountState(authResult.user&&authResult.user.uid,authenticatedEmail):null;
         if(localAccountState){
           const validLocal=Array.isArray(localAccountState.duas)&&Array.isArray(localAccountState.collections)&&Array.isArray(localAccountState.notes);
           if(!validLocal){try{if(window.__sydFirebaseSignOut)await window.__sydFirebaseSignOut();}catch(_){};showError(lang==='id'?'Cadangan lokal akun tidak valid. Data cloud tidak diubah.':'The local account backup is invalid. Cloud data was not changed.');return;}
@@ -656,7 +657,7 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
         }else if(window.__sydResetToFreshState)window.__sydResetToFreshState();
       }
       window.__sydReturningUser=accountMode==='login';
-      try{localStorage.setItem('syd_local_profile',JSON.stringify({name:authenticatedName,gender:authenticatedGender,email:authenticatedEmail,hasAccount:true}));localStorage.setItem('syd_display_name',authenticatedName);localStorage.setItem('syd_gender',authenticatedGender);localStorage.setItem('syd_last_email',authenticatedEmail);localStorage.setItem('syd_session_active','1');localStorage.setItem('saveYourDua.account.v1.'+encodeURIComponent(authenticatedEmail),JSON.stringify(window.__sydGetAppState?window.__sydGetAppState():{}));}catch(storageErr){/* keep session usable for this page even if local storage is blocked */}
+      try{localStorage.setItem('syd_local_profile',JSON.stringify({name:authenticatedName,gender:authenticatedGender,email:authenticatedEmail,hasAccount:true}));localStorage.setItem('syd_display_name',authenticatedName);localStorage.setItem('syd_gender',authenticatedGender);localStorage.setItem('syd_last_email',authenticatedEmail);localStorage.setItem('syd_session_active','1');localStorage.setItem('saveYourDua.account.uid.v2.'+encodeURIComponent(String(authResult.user&&authResult.user.uid||'').trim()),JSON.stringify(window.__sydGetAppState?window.__sydGetAppState():{}));}catch(storageErr){/* keep session usable for this page even if local storage is blocked */}
       try{await window.__sydCloudSave(window.__sydGetAppState?window.__sydGetAppState():{});}catch(syncErr){showError((lang==='id'?'Login berhasil, tetapi sinkronisasi data belum berhasil: ':'Signed in, but cloud sync failed: ')+(syncErr.message||'Try again later.'));return;}
       // Navigate after Firebase authentication and initial cloud sync.
       document.getElementById('sydIntro').style.display='none';
@@ -677,7 +678,7 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
   const btn=document.getElementById('logoutBtn');
   if(!btn)return;
   btn.addEventListener('click',function(){
-    try{const email=(window.__sydFirebaseUser&&window.__sydFirebaseUser.email)||localStorage.getItem('syd_last_email')||'';if(email&&localStorage.getItem('syd_session_active')==='1')localStorage.setItem('saveYourDua.account.v1.'+encodeURIComponent(String(email).trim().toLowerCase()),JSON.stringify(window.__sydGetAppState?window.__sydGetAppState():{}));localStorage.setItem('syd_session_active','0');}catch(e){}
+    try{const email=(window.__sydFirebaseUser&&window.__sydFirebaseUser.email)||localStorage.getItem('syd_last_email')||'';if(email&&localStorage.getItem('syd_session_active')==='1')localStorage.setItem('saveYourDua.account.uid.v2.'+encodeURIComponent(String((window.__sydFirebaseUser&&window.__sydFirebaseUser.uid)||(auth.currentUser&&auth.currentUser.uid)||'').trim()),JSON.stringify(window.__sydGetAppState?window.__sydGetAppState():{}));localStorage.setItem('syd_session_active','0');}catch(e){}
     if(window.__sydActivateGuestState)window.__sydActivateGuestState();
     if(window.__sydFirebaseSignOut)window.__sydFirebaseSignOut().catch(e=>console.warn('Firebase sign-out failed',e));
     window.__sydFirebaseUser=null;
@@ -745,7 +746,7 @@ window.__sydFirebaseAccount=async ({mode,email,password,name,gender})=>{
   return {user:{uid:user.uid,email:user.email,name:resolvedName,gender:resolvedGender},cloudState,hasCloudData:true,profile:{name:resolvedName,gender:resolvedGender,email:user.email}};
  }
  let localState=null;
- try{localState=JSON.parse(localStorage.getItem('saveYourDua.account.v1.'+encodeURIComponent(String(user.email||'').trim().toLowerCase()))||'null');}catch(e){}
+ try{localState=JSON.parse((localStorage.getItem('saveYourDua.account.uid.v2.'+encodeURIComponent(String(user.uid||'').trim()))||localStorage.getItem('saveYourDua.account.v1.'+encodeURIComponent(String(user.email||'').trim().toLowerCase())))||'null');}catch(e){}
  return {user:{uid:user.uid,email:user.email,name:resolvedName,gender:resolvedGender},cloudState:localState&&Array.isArray(localState.duas)&&Array.isArray(localState.collections)&&Array.isArray(localState.notes)?localState:null,hasCloudData:false,profile:{name:resolvedName,gender:resolvedGender,email:user.email}};
 };
 window.__sydCloudSave=async state=>{
@@ -780,7 +781,7 @@ onAuthStateChanged(auth,async user=>{
   if(cloud&&Array.isArray(cloud.duas)&&Array.isArray(cloud.collections)&&Array.isArray(cloud.notes)){
    window.__sydSetAppState(cloud);
   }else{
-   const local=window.__sydActivateAccountState?window.__sydActivateAccountState(email):null;
+   const local=window.__sydActivateAccountState?window.__sydActivateAccountState(user.uid,email):null;
    if(!local&&window.__sydResetToFreshState)window.__sydResetToFreshState();
   }
   // Recheck that this user is still the active Firebase session after awaiting Firestore.
@@ -804,7 +805,7 @@ const guestBtn=document.getElementById('sydContinueGuest');
 if(guestBtn)guestBtn.addEventListener('click',async ev=>{
  ev.preventDefault();ev.stopPropagation();ev.stopImmediatePropagation();
  // Save current signed-in data under its account key before showing a clean guest space.
- try{const email=(auth.currentUser&&auth.currentUser.email)||localStorage.getItem('syd_last_email')||'';if(email&&localStorage.getItem('syd_session_active')==='1')localStorage.setItem('saveYourDua.account.v1.'+encodeURIComponent(String(email).trim().toLowerCase()),JSON.stringify(window.__sydGetAppState?window.__sydGetAppState():{}));}catch(e){}
+ try{const email=(auth.currentUser&&auth.currentUser.email)||localStorage.getItem('syd_last_email')||'';if(email&&localStorage.getItem('syd_session_active')==='1')localStorage.setItem('saveYourDua.account.uid.v2.'+encodeURIComponent(String((window.__sydFirebaseUser&&window.__sydFirebaseUser.uid)||(auth.currentUser&&auth.currentUser.uid)||'').trim()),JSON.stringify(window.__sydGetAppState?window.__sydGetAppState():{}));}catch(e){}
  try{localStorage.setItem('syd_session_active','0');}catch(e){}
  try{if(auth.currentUser)await signOut(auth);}catch(e){console.warn('Could not switch to guest mode cleanly',e);return;}
  window.__sydFirebaseUser=null;
