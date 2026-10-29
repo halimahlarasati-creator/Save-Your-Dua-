@@ -167,7 +167,7 @@ function load(){try{const raw=localStorage.getItem(STORAGE_KEY);if(raw){const d=
 let state=load();
 if(!['id','en'].includes(state.language)){state.language='en';try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}}
 // V75: isolate guest data in a clean namespace, replace shared state on guest entry, and keep guest saves out of Firebase cloud sync.
-const GUEST_STORAGE_KEY='saveYourDua.guest.v4'; // V85 privacy fix: start a clean guest namespace; never inherit possibly account-contaminated v3 guest data. The old v3 data remains in browser storage as a recoverable backup.
+const GUEST_STORAGE_KEY='saveYourDua.guest.v5'; // V86 privacy isolation: use a new empty guest namespace so previously contaminated guest data cannot appear. Older guest data remains in browser storage as a recoverable backup.
 function sydAccountStorageKey(email){return 'saveYourDua.account.v1.'+encodeURIComponent(String(email||'').trim().toLowerCase());}
 function sydValidState(d){return !!(d&&Array.isArray(d.duas)&&Array.isArray(d.collections)&&Array.isArray(d.notes));}
 function sydFreshState(){return {duas:[],collections:clone(defaultCollections),notes:[],language:state&&state.language||'en',readIds:[],profile:null};}
@@ -543,8 +543,8 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
   }
   updateHalimaPrayer();
   setInterval(updateHalimaPrayer,60000);
-  function enterApp(){intro.style.display='none';panel.classList.remove('open');document.body.classList.remove('onboarding-active');try{updateHomeGreeting(localStorage.getItem('syd_display_name')||'');}catch(e){updateHomeGreeting('');}window.scrollTo(0,0);}
-  document.getElementById('sydIntroLanguage').addEventListener('change',e=>{const selector=e.currentTarget;const selected=['en','id'].includes(selector.value)?selector.value:'en';/* Keep the welcome-page selection as a pending choice; do not sync it to the applied app language here. */selector.dataset.pendingLanguage=selected;selector.value=selected;applyIntroLanguage(selected);/* The welcome dropdown is only a preview until the user applies the language. Keep the app's home greeting and Halima prayer tied to the applied app language. */});
+  function enterApp(){/* PRIVACY: always replace the in-memory account state with the isolated guest namespace before entering as guest. */if(!window.__sydFirebaseUser&&window.__sydActivateGuestState){window.__sydActivateGuestState();}intro.style.display='none';panel.classList.remove('open');document.body.classList.remove('onboarding-active');try{updateHomeGreeting('');}catch(e){updateHomeGreeting('');}try{if(typeof renderAll==='function')renderAll();}catch(e){}window.scrollTo(0,0);}
+  document.getElementById('sydIntroLanguage').addEventListener('change',e=>{const selector=e.currentTarget;const selected=['en','id'].includes(selector.value)?selector.value:'en';/* Welcome language is a pending preview only. Do not dispatch changes to the app/settings language or overwrite this value until the user explicitly applies it. */selector.dataset.pendingLanguage=selected;applyIntroLanguage(selected);},true);
   document.getElementById('languageSelect').addEventListener('change',e=>{const introLanguage=document.getElementById('sydIntroLanguage');if(introLanguage&&['en','id'].includes(e.target.value)&&!document.body.classList.contains('onboarding-active')){introLanguage.value=e.target.value;applyIntroLanguage(e.target.value);}updateHalimaPrayer();});
   document.getElementById('sydCreateAccount').addEventListener('click',()=>openAccount('signup'));
   document.getElementById('sydLogin').addEventListener('click',()=>openAccount('login'));
