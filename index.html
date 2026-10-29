@@ -544,7 +544,7 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
   updateHalimaPrayer();
   setInterval(updateHalimaPrayer,60000);
   function enterApp(){intro.style.display='none';panel.classList.remove('open');document.body.classList.remove('onboarding-active');try{updateHomeGreeting(localStorage.getItem('syd_display_name')||'');}catch(e){updateHomeGreeting('');}window.scrollTo(0,0);}
-  document.getElementById('sydIntroLanguage').addEventListener('change',e=>{const selected=['en','id'].includes(e.target.value)?e.target.value:'en';e.target.value=selected;applyIntroLanguage(selected);updateHalimaPrayer();try{updateHomeGreeting(localStorage.getItem('syd_display_name')||'')}catch(_){updateHomeGreeting('')}});
+  document.getElementById('sydIntroLanguage').addEventListener('change',e=>{const selector=e.currentTarget;const selected=['en','id'].includes(selector.value)?selector.value:'en';/* Keep the welcome-page selection as a pending choice; do not sync it to the applied app language here. */selector.dataset.pendingLanguage=selected;selector.value=selected;applyIntroLanguage(selected);updateHalimaPrayer();try{updateHomeGreeting(localStorage.getItem('syd_display_name')||'')}catch(_){updateHomeGreeting('')}/* Other UI refreshes must not revert the user's pending choice. */requestAnimationFrame(()=>{if(selector.dataset.pendingLanguage)selector.value=selector.dataset.pendingLanguage;});});
   document.getElementById('languageSelect').addEventListener('change',e=>{const introLanguage=document.getElementById('sydIntroLanguage');if(introLanguage&&['en','id'].includes(e.target.value)&&!document.body.classList.contains('onboarding-active')){introLanguage.value=e.target.value;applyIntroLanguage(e.target.value);}updateHalimaPrayer();});
   document.getElementById('sydCreateAccount').addEventListener('click',()=>openAccount('signup'));
   document.getElementById('sydLogin').addEventListener('click',()=>openAccount('login'));
@@ -668,7 +668,7 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
       showError((lang==='id'?'Belum bisa melanjutkan: ':'Could not continue: ')+(err&&err.message?err.message:'unexpected error'));
     }
   }, true);
-  const savedLang=(document.getElementById('languageSelect')||{}).value||document.documentElement.lang||'en';const madeWithCare=document.getElementById('halimaMadeWithCare');if(madeWithCare)madeWithCare.textContent=savedLang==='id'?'Dibuat dengan penuh kasih oleh Halima Larasati ʚ♡⃛ɞ(ू•ᴗ•ू❁)':'Made with care by Halima Larasati ʚ♡⃛ɞ(ू•ᴗ•ू❁)';const languageSelect=document.getElementById('sydIntroLanguage');if(Array.from(languageSelect.options).some(o=>o.value===savedLang))languageSelect.value=savedLang;applyIntroLanguage(languageSelect.value);updateHalimaPrayer();
+  const savedLang=(document.getElementById('languageSelect')||{}).value||document.documentElement.lang||'en';const madeWithCare=document.getElementById('halimaMadeWithCare');if(madeWithCare)madeWithCare.textContent=savedLang==='id'?'Dibuat dengan penuh kasih oleh Halima Larasati ʚ♡⃛ɞ(ू•ᴗ•ू❁)':'Made with care by Halima Larasati ʚ♡⃛ɞ(ू•ᴗ•ू❁)';const languageSelect=document.getElementById('sydIntroLanguage');/* Initialize once, but never overwrite a user's pending welcome-page choice during a change event. */if(!languageSelect.dataset.pendingLanguage){const initialLang=['en','id'].includes(savedLang)?savedLang:'en';languageSelect.value=initialLang;languageSelect.dataset.pendingLanguage=initialLang;}applyIntroLanguage(languageSelect.value);updateHalimaPrayer();
 })();
 </script>
 
