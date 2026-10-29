@@ -180,8 +180,8 @@ function sydWriteScoped(key,value){try{localStorage.setItem(key,JSON.stringify(v
 function sydIsGuest(){try{return localStorage.getItem('syd_session_active')!=='1'&&!window.__sydFirebaseUser;}catch(e){return !window.__sydFirebaseUser;}}
 function sydPersistScopedState(){try{if(sydIsGuest())sydWriteScoped(GUEST_STORAGE_KEY,state);else{const user=window.__sydFirebaseUser;if(user&&user.uid)sydWriteScoped(sydAccountStorageKey(user.uid),state);}}catch(e){}}
 window.__sydGetAppState=()=>state;
-window.__sydSetAppState=(next)=>{if(next&&Array.isArray(next.duas)&&Array.isArray(next.collections)&&Array.isArray(next.notes)){state={...next};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;}throw new Error("Cloud data format is invalid.");};
-window.__sydResetToFreshState=()=>{state={duas:[],collections:clone(defaultCollections),notes:[],language:state&&['id','en'].includes(state.language)?state.language:'en',readIds:[],profile:null};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;};
+window.__sydSetAppState=(next)=>{if(next&&Array.isArray(next.duas)&&Array.isArray(next.collections)&&Array.isArray(next.notes)){state={...next};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}/* V89 COUNT FIX: refresh every view immediately after authenticated state hydration so collection-card counts cannot remain at the pre-login empty value. */try{if(typeof renderAll==='function')renderAll();}catch(renderError){console.warn('Could not refresh views after state hydration:',renderError)}return state;}throw new Error("Cloud data format is invalid.");};
+window.__sydResetToFreshState=()=>{state={duas:[],collections:clone(defaultCollections),notes:[],language:state&&['id','en'].includes(state.language)?state.language:'en',readIds:[],profile:null};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}/* Keep cards consistent when an account has no saved state yet. */try{if(typeof renderAll==='function')renderAll();}catch(renderError){console.warn('Could not refresh views after state reset:',renderError)}return state;};
 window.__sydActivateGuestState=()=>{
   // PRIVACY BOUNDARY: guest mode may read only the dedicated v6 guest key.
   // Do not fall back to the shared legacy state key or any account/email/UID cache.
@@ -671,6 +671,9 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
       }
       window.__sydReturningUser=accountMode==='login';
       try{localStorage.setItem('syd_local_profile',JSON.stringify({name:authenticatedName,gender:authenticatedGender,email:authenticatedEmail,hasAccount:true}));localStorage.setItem('syd_display_name',authenticatedName);localStorage.setItem('syd_gender',authenticatedGender);localStorage.setItem('syd_last_email',authenticatedEmail);localStorage.setItem('syd_session_active','1');localStorage.setItem('saveYourDua.account.uid.v2.'+encodeURIComponent(String(authResult.user&&authResult.user.uid||'').trim()),JSON.stringify(window.__sydGetAppState?window.__sydGetAppState():{}));}catch(storageErr){/* keep session usable for this page even if local storage is blocked */}
+      // V89 COUNT FIX: render again after the authenticated account state is finalized,
+      // so home collection cards use the same state that the opened lists display.
+      try{if(typeof renderAll==='function')renderAll();}catch(renderError){console.warn('Could not refresh account cards after login:',renderError)}
       try{await window.__sydCloudSave(window.__sydGetAppState?window.__sydGetAppState():{});}catch(syncErr){showError((lang==='id'?'Login berhasil, tetapi sinkronisasi data belum berhasil: ':'Signed in, but cloud sync failed: ')+(syncErr.message||'Try again later.'));return;}
       // Navigate after Firebase authentication and initial cloud sync.
       document.getElementById('sydIntro').style.display='none';
