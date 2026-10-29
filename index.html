@@ -164,12 +164,15 @@ const hadithDuas=[
 const defaultCollections=[{id:'after-salah',name:'After Salah',kind:'default',duaIds:['hadith-bukhari-834','hadith-abudawud-1522','quran-2-201']},{id:'personal',name:'My Personal Duas',kind:'default',duaIds:[]},{id:'after-tahajjud',name:'After Tahajjud',kind:'default',duaIds:['quran-2-201','quran-28-24','quran-20-25-28','hadith-tirmidhi-3490']},{id:'after-dhuha',name:'After Dhuha',kind:'default',duaIds:['quran-2-201','quran-28-24','quran-20-25-28']},{id:'hajat',name:'After Salat Hajat',kind:'default',duaIds:['quran-2-201','quran-28-24','quran-20-25-28','quran-3-173']},{id:'morning-evening',name:'Morning & Evening',kind:'default',duaIds:['hadith-bukhari-6306','quran-23-97','quran-3-8']},{id:'after-sleeping',name:'After Waking',kind:'default',duaIds:['hadith-bukhari-6312']},{id:'before-sleeping',name:'Before Sleeping',kind:'default',duaIds:['quran-2-286','quran-2-255','quran-3-191-194']},{id:'comfort',name:'When I Need Comfort',kind:'default',duaIds:['hadith-bukhari-6369','quran-3-173','quran-2-286','quran-23-97']}];
 const clone=x=>JSON.parse(JSON.stringify(x));
 function load(){try{const raw=localStorage.getItem(STORAGE_KEY);if(raw){const d=JSON.parse(raw);if(d&&Array.isArray(d.duas)&&Array.isArray(d.collections)&&Array.isArray(d.notes)){const defaults=clone(defaultCollections);defaults.forEach(def=>{let existing=d.collections.find(c=>c.id===def.id);if(!existing){existing=clone(def);const before=d.collections.findIndex(c=>c.id==='before-sleeping');if(def.id==='after-sleeping'&&before>=0)d.collections.splice(before,0,existing);else if(def.id==='before-sleeping'&&before<0)d.collections.push(existing);else if(def.id!=='after-sleeping')d.collections.push(existing);return;}if(!Array.isArray(existing.duaIds))existing.duaIds=[];/* Preserve the user's current order and custom additions, but restore any missing built-in dua IDs. */def.duaIds.forEach(id=>{if(!existing.duaIds.includes(id))existing.duaIds.push(id);});});if(!d.profile||typeof d.profile!=='object')d.profile=null;return d;}}}catch(e){console.warn('Could not load saved data',e)}return {duas:[],collections:clone(defaultCollections),notes:[],language:'en',readIds:[],profile:null}}
-let state=load();
-if(!['id','en'].includes(state.language)){state.language='en';try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}}
+// V88 PRIVACY HARDENING: the shared legacy key may contain data from any prior account.
+// At startup, load only the non-sensitive interface language. Personal data is hydrated
+// only after Firebase confirms a UID, or after the user explicitly enters guest mode.
+function sydInitialLanguage(){try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');return d&&['id','en'].includes(d.language)?d.language:'en';}catch(e){return 'en';}}
+let state={duas:[],collections:clone(defaultCollections),notes:[],language:sydInitialLanguage(),readIds:[],profile:null};
 // V75: isolate guest data in a clean namespace, replace shared state on guest entry, and keep guest saves out of Firebase cloud sync.
-const GUEST_STORAGE_KEY='saveYourDua.guest.v6'; // V87 PRIVACY FIX: use a fresh guest-only namespace. Never read/migrate v1, v5, or account caches into guest mode; older values remain untouched as a backup and cannot appear in the guest session.
+const GUEST_STORAGE_KEY='saveYourDua.guest.v6'; // V87/V88 PRIVACY FIX: use a fresh guest-only namespace. Never read/migrate v1, v5, or account caches into guest mode; older values remain untouched as a backup and cannot appear in the guest session.
 function sydAccountStorageKey(uid){return 'saveYourDua.account.uid.v2.'+encodeURIComponent(String(uid||'').trim());}
-function sydLegacyEmailStorageKey(email){return 'saveYourDua.account.v1.'+encodeURIComponent(String(email||'').trim().toLowerCase());}
+// V88: email-based account caches are deliberately not read for account restoration.
 function sydValidState(d){return !!(d&&Array.isArray(d.duas)&&Array.isArray(d.collections)&&Array.isArray(d.notes));}
 function sydFreshState(){return {duas:[],collections:clone(defaultCollections),notes:[],language:state&&state.language||'en',readIds:[],profile:null};}
 function sydReadScoped(key){try{const d=JSON.parse(localStorage.getItem(key)||'null');if(sydValidState(d))return d;}catch(e){}return null;}
@@ -178,7 +181,7 @@ function sydIsGuest(){try{return localStorage.getItem('syd_session_active')!=='1
 function sydPersistScopedState(){try{if(sydIsGuest())sydWriteScoped(GUEST_STORAGE_KEY,state);else{const user=window.__sydFirebaseUser;if(user&&user.uid)sydWriteScoped(sydAccountStorageKey(user.uid),state);}}catch(e){}}
 window.__sydGetAppState=()=>state;
 window.__sydSetAppState=(next)=>{if(next&&Array.isArray(next.duas)&&Array.isArray(next.collections)&&Array.isArray(next.notes)){state={...next};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;}throw new Error("Cloud data format is invalid.");};
-window.__sydResetToFreshState=()=>{state={duas:[],collections:clone(defaultCollections),notes:[],language:state&&state.language||'en',readIds:[],profile:null};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;};
+window.__sydResetToFreshState=()=>{state={duas:[],collections:clone(defaultCollections),notes:[],language:state&&['id','en'].includes(state.language)?state.language:'en',readIds:[],profile:null};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;};
 window.__sydActivateGuestState=()=>{
   // PRIVACY BOUNDARY: guest mode may read only the dedicated v6 guest key.
   // Do not fall back to the shared legacy state key or any account/email/UID cache.
@@ -189,8 +192,8 @@ window.__sydActivateGuestState=()=>{
   try{if(typeof renderAll==='function')renderAll();if(typeof updateHomeGreeting==='function')updateHomeGreeting('');}catch(e){console.warn('Guest view refresh failed',e)}
   return state;
 };
-window.__sydActivateAccountState=(uid,email)=>{let saved=uid?sydReadScoped(sydAccountStorageKey(uid)):null;/* One-time compatibility migration: only consult this email's legacy cache when the UID cache is absent. */if(!saved&&email){saved=sydReadScoped(sydLegacyEmailStorageKey(email));if(saved&&uid)sydWriteScoped(sydAccountStorageKey(uid),saved);}if(saved){state={...saved};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;}return null;};
-try{if(!state.profile){const n=localStorage.getItem('syd_display_name')||'',g=localStorage.getItem('syd_gender')||'',em=localStorage.getItem('syd_last_email')||'';if(n||g||em)state.profile={name:n,gender:g||'sister',email:em,hasAccount:localStorage.getItem('syd_session_active')==='1'};}}catch(e){}
+window.__sydActivateAccountState=(uid)=>{const saved=uid?sydReadScoped(sydAccountStorageKey(uid)):null;if(saved){state={...saved};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;}return null;};
+// V88: never hydrate profile metadata from a previous local session during startup.
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));sydPersistScopedState();if(!sydIsGuest()&&window.__sydFirebaseUser&&window.__sydCloudSave)window.__sydCloudSave(state).catch(err=>console.warn('Cloud sync pending:',err));return true}catch(e){toast('Could not save. Your browser storage may be full.');return false}}
 function compressPhoto(file){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>{const max=800,scale=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*scale);c.height=Math.round(im.height*scale);c.getContext('2d').drawImage(im,0,0,c.width,c.height);resolve(c.toDataURL('image/jpeg',.62));};im.onerror=reject;im.src=URL.createObjectURL(file);});}
 function uid(prefix='item'){return prefix+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)}
@@ -642,6 +645,7 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
       catch(firebaseErr){btn.disabled=false;btn.textContent=lang==='id'?'Lanjutkan':'Continue';const code=firebaseErr&&firebaseErr.code;const messages={'auth/email-already-in-use':lang==='id'?'Email ini sudah terdaftar. Silakan masuk.':'This email is already registered. Please log in.','auth/invalid-credential':lang==='id'?'Email atau kata sandi salah.':'Incorrect email or password.','auth/weak-password':lang==='id'?'Kata sandi terlalu lemah.':'Password is too weak.','auth/invalid-email':lang==='id'?'Format email tidak valid.':'Email address is invalid.','auth/network-request-failed':lang==='id'?'Koneksi gagal. Periksa internet lalu coba lagi.':'Network error. Check your internet connection and try again.','auth/operation-not-allowed':lang==='id'?'Metode Email/Password belum diaktifkan di Firebase.':'Email/Password sign-in is not enabled in Firebase.'};showError(messages[code]||((lang==='id'?'Firebase gagal: ':'Firebase error: ')+(firebaseErr.message||code||'unknown error')));return;}
       btn.disabled=false;btn.textContent=lang==='id'?'Lanjutkan':'Continue';
       // Use the authenticated account's Firestore profile, not stale values from the prior local session.
+      if(!authResult.user||!authResult.user.uid||!window.__sydFirebaseUser||window.__sydFirebaseUser.uid!==authResult.user.uid){showError(lang==='id'?'Sesi akun berubah. Silakan coba masuk lagi.':'The account session changed. Please try signing in again.');return;}
       const authenticatedEmail=String((authResult.user&&authResult.user.email)||email).trim().toLowerCase();
       const authenticatedName=String((authResult.profile&&authResult.profile.name)||(authResult.user&&authResult.user.name)||displayName||'').trim();
       const authenticatedGender=((authResult.profile&&authResult.profile.gender)||(authResult.user&&authResult.user.gender)||gender)==='brother'?'brother':'sister';
@@ -732,6 +736,8 @@ window.__sydFirebaseAccount=async ({mode,email,password,name,gender})=>{
   credential=await signInWithEmailAndPassword(auth,email,password);
  }
  const user=credential.user;
+ // Publish the just-authenticated UID immediately; the auth-state callback may run later.
+ window.__sydFirebaseUser={uid:user.uid,email:user.email};
  const requestedEmail=String(email||'').trim().toLowerCase();
  const authenticatedEmail=String(user.email||'').trim().toLowerCase();
  if(mode!=='signup' && authenticatedEmail!==requestedEmail){
@@ -755,7 +761,8 @@ window.__sydFirebaseAccount=async ({mode,email,password,name,gender})=>{
   return {user:{uid:user.uid,email:user.email,name:resolvedName,gender:resolvedGender},cloudState,hasCloudData:true,profile:{name:resolvedName,gender:resolvedGender,email:user.email}};
  }
  let localState=null;
- try{localState=JSON.parse((localStorage.getItem('saveYourDua.account.uid.v2.'+encodeURIComponent(String(user.uid||'').trim()))||localStorage.getItem('saveYourDua.account.v1.'+encodeURIComponent(String(user.email||'').trim().toLowerCase())))||'null');}catch(e){}
+ // V88: never restore account data from an email-keyed cache; Firebase UID is the boundary.
+ try{localState=JSON.parse(localStorage.getItem('saveYourDua.account.uid.v2.'+encodeURIComponent(String(user.uid||'').trim()))||'null');}catch(e){}
  return {user:{uid:user.uid,email:user.email,name:resolvedName,gender:resolvedGender},cloudState:localState&&Array.isArray(localState.duas)&&Array.isArray(localState.collections)&&Array.isArray(localState.notes)?localState:null,hasCloudData:false,profile:{name:resolvedName,gender:resolvedGender,email:user.email}};
 };
 window.__sydCloudSave=async state=>{
@@ -786,6 +793,8 @@ onAuthStateChanged(auth,async user=>{
   if(user.displayName)localStorage.setItem('syd_display_name',user.displayName);
   // Restore this authenticated UID's cloud data before showing the account UI.
   const snap=await getDoc(doc(db,'users',user.uid,'private','appData'));
+  // V88: a delayed response from a previous account must never hydrate the current UI.
+  if(!auth.currentUser||auth.currentUser.uid!==user.uid)return;
   const cloud=snap.exists()?(snap.data()||{}).state:null;
   if(cloud&&Array.isArray(cloud.duas)&&Array.isArray(cloud.collections)&&Array.isArray(cloud.notes)){
    window.__sydSetAppState(cloud);
@@ -804,7 +813,8 @@ onAuthStateChanged(auth,async user=>{
   if(intro)intro.style.display='none';if(panel)panel.classList.remove('open');document.body.classList.remove('onboarding-active');
  }catch(e){
   console.error('Could not safely restore account data:',e);
-  // Fail closed: do not leave another session's shared state visible.
+  // A stale callback must not reset the state of a newer account.
+  if(!auth.currentUser||auth.currentUser.uid!==user.uid)return;
   if(window.__sydResetToFreshState)window.__sydResetToFreshState();
   try{if(typeof renderAll==='function')renderAll();}catch(_){}
  }
