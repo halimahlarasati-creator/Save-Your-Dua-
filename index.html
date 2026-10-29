@@ -566,7 +566,7 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
   }
   updateHalimaPrayer();
   setInterval(updateHalimaPrayer,60000);
-  function enterApp(){/* PRIVACY: always replace the in-memory account state with the isolated guest namespace before entering as guest. */if(!window.__sydFirebaseUser&&window.__sydActivateGuestState){window.__sydActivateGuestState();}intro.style.display='none';panel.classList.remove('open');document.body.classList.remove('onboarding-active');try{updateHomeGreeting('');}catch(e){updateHomeGreeting('');}try{if(typeof renderAll==='function')renderAll();}catch(e){}window.scrollTo(0,0);}
+  function enterApp(){/* PRIVACY: always replace the in-memory account state with the isolated guest namespace before entering as guest. */if(!window.__sydFirebaseUser&&window.__sydActivateGuestState){window.__sydActivateGuestState();}intro.style.display='none';panel.classList.remove('open');document.body.classList.remove('onboarding-active');try{updateHomeGreeting('');}catch(e){updateHomeGreeting('');}try{if(typeof renderAll==='function')renderAll();}catch(e){}window.scrollTo(0,0);document.dispatchEvent(new CustomEvent('syd:app-entered'));}
   document.getElementById('sydIntroLanguage').addEventListener('change',e=>{const selector=e.currentTarget;const selected=['en','id'].includes(selector.value)?selector.value:'en';/* Welcome language is a pending preview only. Do not dispatch changes to the app/settings language or overwrite this value until the user explicitly applies it. */selector.dataset.pendingLanguage=selected;applyIntroLanguage(selected);},true);
   document.getElementById('languageSelect').addEventListener('change',e=>{const introLanguage=document.getElementById('sydIntroLanguage');if(introLanguage&&['en','id'].includes(e.target.value)&&!document.body.classList.contains('onboarding-active')){introLanguage.value=e.target.value;applyIntroLanguage(e.target.value);}updateHalimaPrayer();});
   document.getElementById('sydCreateAccount').addEventListener('click',()=>openAccount('signup'));
@@ -891,9 +891,12 @@ if(guestBtn)guestBtn.addEventListener('click',async ev=>{
   let deferredInstallPrompt=null;
   const btn=document.getElementById('installAppBtn');
   const status=document.getElementById('installAppStatus');
+  const seenKey='syd_install_announcement_seen_v1';
   const installed=()=>window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
   const lang=()=>((document.getElementById('languageSelect')||{}).value||document.documentElement.lang)==='id';
   const message=(en,id)=>lang()?id:en;
+  const isIOS=()=>/iPhone|iPad|iPod/i.test(navigator.userAgent||'');
+  const isAndroid=()=>/Android/i.test(navigator.userAgent||'');
   function refreshInstallUI(){
     if(!btn||!status)return;
     if(installed()){
@@ -905,29 +908,57 @@ if(guestBtn)guestBtn.addEventListener('click',async ev=>{
       btn.textContent=message('＋ Add to Home Screen','＋ Tambahkan ke Layar Utama');
     }
   }
-  window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstallPrompt=event;refreshInstallUI();});
-  window.addEventListener('appinstalled',()=>{deferredInstallPrompt=null;refreshInstallUI();});
-  if(btn)btn.addEventListener('click',async()=>{
+  function openGuide(){
+    const title=message('Add Save Your Dua to your Home Screen','Pasang Save Your Dua di Layar Utama');
+    let body;
+    if(isIOS()){
+      body=message('<p>On your iPhone or iPad:</p><ol><li>Open this website in <strong>Safari</strong>.</li><li>Tap the <strong>Share</strong> button.</li><li>Choose <strong>Add to Home Screen</strong>, then tap <strong>Add</strong>.</li></ol><p class="tiny muted">If you are viewing this in another app’s browser, open the link in Safari first.</p>','<p>Di iPhone atau iPad:</p><ol><li>Buka website ini melalui <strong>Safari</strong>.</li><li>Ketuk tombol <strong>Bagikan (Share)</strong>.</li><li>Pilih <strong>Tambahkan ke Layar Utama</strong>, lalu ketuk <strong>Tambah</strong>.</li></ol><p class="tiny muted">Kalau halaman ini dibuka dari browser aplikasi lain, buka tautannya melalui Safari terlebih dahulu.</p>');
+    }else if(isAndroid()){
+      body=message('<p>On your Android phone:</p><ol><li>Open this website in <strong>Chrome</strong>.</li><li>Tap the three-dot menu <strong>⋮</strong>.</li><li>Choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li><li>Confirm the installation.</li></ol><p class="tiny muted">If the install option is missing, reload the website in Chrome and check again.</p>','<p>Di HP Android:</p><ol><li>Buka website ini melalui <strong>Chrome</strong>.</li><li>Ketuk menu titik tiga <strong>⋮</strong>.</li><li>Pilih <strong>Instal aplikasi</strong> atau <strong>Tambahkan ke layar utama</strong>.</li><li>Konfirmasi pemasangan.</li></ol><p class="tiny muted">Kalau pilihan instal belum muncul, muat ulang website di Chrome lalu periksa lagi.</p>');
+    }else{
+      body=message('<p>Open this website in your browser menu and look for <strong>Install</strong> or <strong>Add to Home Screen</strong>.</p>','<p>Buka menu browser saat website ini terbuka, lalu cari pilihan <strong>Instal</strong> atau <strong>Tambahkan ke Layar Utama</strong>.</p>');
+    }
+    if(typeof window.openModal==='function'){
+      window.openModal(title,body,'<button class="btn" id="installGuideDone">'+message('Got it ♡','Mengerti ♡')+'</button>');
+      const done=document.getElementById('installGuideDone');if(done)done.addEventListener('click',window.closeModal||function(){});
+    }else alert((isIOS()?'Safari → Share → Add to Home Screen':isAndroid()?'Chrome ⋮ → Install app / Add to Home screen':'Browser menu → Install / Add to Home Screen'));
+  }
+  function tryInstallOrGuide(){
     if(installed()){refreshInstallUI();return;}
     if(deferredInstallPrompt){
-      deferredInstallPrompt.prompt();
-      try{await deferredInstallPrompt.userChoice;}catch(e){}
-      deferredInstallPrompt=null;
-      refreshInstallUI();
+      const promptEvent=deferredInstallPrompt;deferredInstallPrompt=null;
+      promptEvent.prompt();
+      Promise.resolve(promptEvent.userChoice).catch(()=>{}).finally(refreshInstallUI);
       return;
     }
-    const ua=navigator.userAgent||'';
-    let text;
-    if(/iPhone|iPad|iPod/i.test(ua)) text=message('On iPhone, open this page in Safari, tap Share, then choose Add to Home Screen.','Di iPhone, buka halaman ini di Safari, ketuk Bagikan, lalu pilih Tambahkan ke Layar Utama.');
-    else if(/Android/i.test(ua)) text=message('To install on Android, open your browser menu and choose “Install app” or “Add to Home screen”. If you do not see it, reload the page in Chrome after the site finishes updating.','Untuk memasang di Android, buka menu browser lalu pilih “Instal aplikasi” atau “Tambahkan ke layar utama”. Jika belum muncul, muat ulang halaman di Chrome setelah situs selesai diperbarui.');
-    else text=message('Open your browser menu and choose “Add to Home Screen” or “Install”.','Buka menu browser lalu pilih “Tambahkan ke Layar Utama” atau “Instal”.');
-    alert(text);
-  });
+    openGuide();
+  }
+  function showFirstVisitAnnouncement(){
+    if(installed())return;
+    try{if(localStorage.getItem(seenKey)==='1')return;}catch(e){}
+    if(document.body.classList.contains('onboarding-active'))return;
+    if(typeof window.openModal!=='function')return;
+    const title=message('A little space, always close ♡','Ruang kecil untuk doa-doamu, selalu dekat ♡');
+    const body=message('<p>Keep Save Your Dua close by adding it to your phone’s Home Screen, so you can return to your duas whenever you need.</p><p class="tiny muted">It only takes a moment, and you can keep using the website if you prefer.</p>','<p>Yuk, letakkan Save Your Dua di Layar Utama HP kamu supaya kamu bisa kembali membaca doa-doamu kapan saja.</p><p class="tiny muted">Caranya sebentar saja. Kalau belum ingin memasang, kamu tetap bisa memakai website seperti biasa.</p>');
+    const actions='<button class="btn light" id="installAnnouncementLater">'+message('Maybe later','Nanti saja')+'</button><button class="btn" id="installAnnouncementHow">'+message('Show me how ♡','Lihat caranya ♡')+'</button>';
+    window.openModal(title,body,actions);
+    try{localStorage.setItem(seenKey,'1');}catch(e){}
+    const later=document.getElementById('installAnnouncementLater');
+    const how=document.getElementById('installAnnouncementHow');
+    if(later)later.addEventListener('click',()=>window.closeModal&&window.closeModal());
+    if(how)how.addEventListener('click',()=>{if(window.closeModal)window.closeModal();tryInstallOrGuide();});
+  }
+  window.sydShowInstallGuide=openGuide;
+  window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstallPrompt=event;refreshInstallUI();});
+  window.addEventListener('appinstalled',()=>{deferredInstallPrompt=null;refreshInstallUI();});
+  if(btn)btn.addEventListener('click',tryInstallOrGuide);
   document.addEventListener('syd:language-changed',refreshInstallUI);
   refreshInstallUI();
   if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
     window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(err=>console.warn('Save Your Dua offline support could not be registered:',err)));
   }
+  window.addEventListener('load',()=>setTimeout(showFirstVisitAnnouncement,1200));
+  document.addEventListener('syd:app-entered',()=>setTimeout(showFirstVisitAnnouncement,700));
 })();
 </script>
 </body></html>
