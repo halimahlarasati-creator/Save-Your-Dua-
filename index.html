@@ -167,7 +167,7 @@ function load(){try{const raw=localStorage.getItem(STORAGE_KEY);if(raw){const d=
 let state=load();
 if(!['id','en'].includes(state.language)){state.language='en';try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}}
 // V75: isolate guest data in a clean namespace, replace shared state on guest entry, and keep guest saves out of Firebase cloud sync.
-const GUEST_STORAGE_KEY='saveYourDua.guest.v5'; // V86 privacy isolation: use a new empty guest namespace so previously contaminated guest data cannot appear. Older guest data remains in browser storage as a recoverable backup.
+const GUEST_STORAGE_KEY='saveYourDua.guest.v6'; // V87 PRIVACY FIX: use a fresh guest-only namespace. Never read/migrate v1, v5, or account caches into guest mode; older values remain untouched as a backup and cannot appear in the guest session.
 function sydAccountStorageKey(uid){return 'saveYourDua.account.uid.v2.'+encodeURIComponent(String(uid||'').trim());}
 function sydLegacyEmailStorageKey(email){return 'saveYourDua.account.v1.'+encodeURIComponent(String(email||'').trim().toLowerCase());}
 function sydValidState(d){return !!(d&&Array.isArray(d.duas)&&Array.isArray(d.collections)&&Array.isArray(d.notes));}
@@ -179,7 +179,16 @@ function sydPersistScopedState(){try{if(sydIsGuest())sydWriteScoped(GUEST_STORAG
 window.__sydGetAppState=()=>state;
 window.__sydSetAppState=(next)=>{if(next&&Array.isArray(next.duas)&&Array.isArray(next.collections)&&Array.isArray(next.notes)){state={...next};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;}throw new Error("Cloud data format is invalid.");};
 window.__sydResetToFreshState=()=>{state={duas:[],collections:clone(defaultCollections),notes:[],language:state&&state.language||'en',readIds:[],profile:null};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;};
-window.__sydActivateGuestState=()=>{const guest=sydReadScoped(GUEST_STORAGE_KEY)||sydFreshState();state={...guest,profile:null};try{localStorage.setItem('syd_session_active','0');localStorage.removeItem('syd_display_name');localStorage.removeItem('syd_gender');localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}sydWriteScoped(GUEST_STORAGE_KEY,state);try{if(typeof renderAll==='function')renderAll();if(typeof updateHomeGreeting==='function')updateHomeGreeting('');}catch(e){console.warn('Guest view refresh failed',e)}return state;};
+window.__sydActivateGuestState=()=>{
+  // PRIVACY BOUNDARY: guest mode may read only the dedicated v6 guest key.
+  // Do not fall back to the shared legacy state key or any account/email/UID cache.
+  const guest=sydReadScoped(GUEST_STORAGE_KEY)||sydFreshState();
+  state={...guest,profile:null};
+  try{localStorage.setItem('syd_session_active','0');localStorage.removeItem('syd_display_name');localStorage.removeItem('syd_gender');localStorage.removeItem('syd_last_email');localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}
+  sydWriteScoped(GUEST_STORAGE_KEY,state);
+  try{if(typeof renderAll==='function')renderAll();if(typeof updateHomeGreeting==='function')updateHomeGreeting('');}catch(e){console.warn('Guest view refresh failed',e)}
+  return state;
+};
 window.__sydActivateAccountState=(uid,email)=>{let saved=uid?sydReadScoped(sydAccountStorageKey(uid)):null;/* One-time compatibility migration: only consult this email's legacy cache when the UID cache is absent. */if(!saved&&email){saved=sydReadScoped(sydLegacyEmailStorageKey(email));if(saved&&uid)sydWriteScoped(sydAccountStorageKey(uid),saved);}if(saved){state={...saved};try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}return state;}return null;};
 try{if(!state.profile){const n=localStorage.getItem('syd_display_name')||'',g=localStorage.getItem('syd_gender')||'',em=localStorage.getItem('syd_last_email')||'';if(n||g||em)state.profile={name:n,gender:g||'sister',email:em,hasAccount:localStorage.getItem('syd_session_active')==='1'};}}catch(e){}
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));sydPersistScopedState();if(!sydIsGuest()&&window.__sydFirebaseUser&&window.__sydCloudSave)window.__sydCloudSave(state).catch(err=>console.warn('Cloud sync pending:',err));return true}catch(e){toast('Could not save. Your browser storage may be full.');return false}}
