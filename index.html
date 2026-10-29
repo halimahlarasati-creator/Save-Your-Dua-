@@ -521,7 +521,7 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
       'Когда мир кажется утомительным, пусть милость Аллаха успокоит твоё сердце. Будь бережна к себе и позволь себе начать снова. 🌙'
     ]
   };
-  document.addEventListener('syd:language-changed',e=>{updateHalimaPrayer();const lang=e.detail&&e.detail.language;const introLanguage=document.getElementById('sydIntroLanguage');if(introLanguage&&['en','id'].includes(lang)){introLanguage.value=lang;applyIntroLanguage(lang);}try{updateHomeGreeting(localStorage.getItem('syd_display_name')||'')}catch(err){updateHomeGreeting('')}});
+  document.addEventListener('syd:language-changed',e=>{updateHalimaPrayer();const lang=e.detail&&e.detail.language;const introLanguage=document.getElementById('sydIntroLanguage');/* Keep the welcome-page choice pending until the user leaves onboarding. */if(introLanguage&&['en','id'].includes(lang)&&!document.body.classList.contains('onboarding-active')){introLanguage.value=lang;applyIntroLanguage(lang);}try{updateHomeGreeting(localStorage.getItem('syd_display_name')||'')}catch(err){updateHomeGreeting('')}});
   function updateHalimaPrayer(){
     const msg=document.getElementById('halimaPrayerMessage'),dateEl=document.getElementById('halimaPrayerDate'),kicker=document.getElementById('halimaPrayerKicker');if(!msg||!dateEl||!kicker)return;
     const now=new Date(),lang=(['en','id'].includes((document.getElementById('languageSelect')||{}).value)?document.getElementById('languageSelect').value:((document.getElementById('sydIntroLanguage')||{}).value||'en'));
@@ -545,7 +545,7 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
   setInterval(updateHalimaPrayer,60000);
   function enterApp(){intro.style.display='none';panel.classList.remove('open');document.body.classList.remove('onboarding-active');try{updateHomeGreeting(localStorage.getItem('syd_display_name')||'');}catch(e){updateHomeGreeting('');}window.scrollTo(0,0);}
   document.getElementById('sydIntroLanguage').addEventListener('change',e=>{const selected=['en','id'].includes(e.target.value)?e.target.value:'en';e.target.value=selected;applyIntroLanguage(selected);updateHalimaPrayer();try{updateHomeGreeting(localStorage.getItem('syd_display_name')||'')}catch(_){updateHomeGreeting('')}});
-  document.getElementById('languageSelect').addEventListener('change',e=>{const introLanguage=document.getElementById('sydIntroLanguage');if(introLanguage&&['en','id'].includes(e.target.value)){introLanguage.value=e.target.value;applyIntroLanguage(e.target.value);}updateHalimaPrayer();});
+  document.getElementById('languageSelect').addEventListener('change',e=>{const introLanguage=document.getElementById('sydIntroLanguage');if(introLanguage&&['en','id'].includes(e.target.value)&&!document.body.classList.contains('onboarding-active')){introLanguage.value=e.target.value;applyIntroLanguage(e.target.value);}updateHalimaPrayer();});
   document.getElementById('sydCreateAccount').addEventListener('click',()=>openAccount('signup'));
   document.getElementById('sydLogin').addEventListener('click',()=>openAccount('login'));
   document.getElementById('sydAccountClose').addEventListener('click',()=>panel.classList.remove('open'));
