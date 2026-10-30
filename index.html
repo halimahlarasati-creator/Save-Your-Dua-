@@ -96,7 +96,7 @@ I hope you don't just visit this space, but make it part of your days. Take a mo
 </section>
 
 <header class="topbar"><div><div class="brand">save your <span>dua</span></div><div class="tiny muted" id="tagline">a little space for your prayers</div></div><div class="top-actions"><button class="profile-chip" id="profileChip" type="button" aria-label="Profile and account status">👤 <span id="profileChipText">Tamu</span></button><button class="icon-btn" id="languageBtn" aria-label="Choose language" title="Language">文</button><button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings">⚙</button><button class="icon-btn" id="logoutBtn" aria-label="Log out" title="Log out">🚪</button></div></header>
-<section class="profile-panel" id="profilePanel" role="dialog" aria-modal="true" aria-labelledby="profilePanelTitle"><div class="profile-card"><div class="row" style="justify-content:space-between;align-items:center"><div class="profile-avatar">👤</div><button class="icon-btn" id="closeProfilePanel" type="button" aria-label="Close profile">✕</button></div><h2 id="profilePanelTitle" style="margin:0 0 6px">Profil</h2><p class="muted tiny" id="profileStatusText">Kamu sedang menggunakan Save Your Dua sebagai tamu.</p><div class="card" style="margin:14px 0"><p class="tiny muted" style="margin:0 0 4px">Nama</p><strong id="profileNameText">Tamu</strong><p class="tiny muted" style="margin:12px 0 4px">Email</p><div id="profileEmailText">Belum masuk dengan akun</div><p class="tiny muted" style="margin:12px 0 4px">Penyimpanan</p><div id="profileStorageText">Disimpan di browser ini</div></div><div class="row wrap"><button class="btn" id="profileLoginBtn" type="button">Masuk ke akun</button><button class="btn light" id="profileSignupBtn" type="button">Buat akun</button><button class="btn danger hidden" id="profileLogoutBtn" type="button">Keluar dari akun 🚪</button></div><p class="tiny muted" style="margin:12px 0 0">Jangan gunakan perangkat bersama untuk menyimpan sesi akun. Pastikan email di profil sesuai dengan akun yang kamu gunakan.</p></div></section>
+<section class="profile-panel" id="profilePanel" role="dialog" aria-modal="true" aria-labelledby="profilePanelTitle"><div class="profile-card"><div class="row" style="justify-content:space-between;align-items:center"><div class="profile-avatar">👤</div><button class="icon-btn" id="closeProfilePanel" type="button" aria-label="Close profile">✕</button></div><h2 id="profilePanelTitle" style="margin:0 0 6px">Profil</h2><p class="muted tiny" id="profileStatusText">Kamu sedang menggunakan Save Your Dua sebagai tamu.</p><div class="card" style="margin:14px 0"><p class="tiny muted" style="margin:0 0 4px">Nama</p><strong id="profileNameText">Tamu</strong><p class="tiny muted" style="margin:12px 0 4px">Email</p><div id="profileEmailText">Belum masuk dengan akun</div><p class="tiny muted" style="margin:12px 0 4px">Penyimpanan</p><div id="profileStorageText">Disimpan di browser ini</div></div><div class="row wrap"><button class="btn" id="profileLoginBtn" type="button">Masuk ke akun</button><button class="btn light" id="profileSignupBtn" type="button">Buat akun</button><button class="btn danger hidden" id="profileLogoutBtn" type="button">Keluar dari akun 🚪</button><button class="btn danger hidden" id="profileDeleteBtn" type="button">Hapus akun</button></div><p class="tiny muted" style="margin:12px 0 0">Jangan gunakan perangkat bersama untuk menyimpan sesi akun. Pastikan email di profil sesuai dengan akun yang kamu gunakan.</p></div></section>
 <main class="main">
 <section class="screen active" id="screen-home" aria-labelledby="homeTitle"><div class="home-greeting" id="homeGreeting" aria-live="polite"><p class="greeting-title">Assalamu’alaikum 💕</p><p class="tiny muted" style="margin:0">Welcome to your little dua space.</p></div><div class="halima-prayer" id="halimaPrayerCard" aria-live="polite"><div class="prayer-kicker" id="halimaPrayerKicker">A LITTLE DUA FROM ME FOR YOU ♡</div><p class="prayer-message" id="halimaPrayerMessage">Semoga Allah menenangkan hati kamu hari ini, ya. Kalau ada banyak hal yang lagi kamu pikirkan, semoga satu per satu terasa lebih ringan. Kamu nggak harus menyelesaikan semuanya sekaligus. 🤍</p><p class="prayer-date" id="halimaPrayerDate"></p></div><div class="welcome"><div class="eyebrow" id="homeEyebrow">YOUR PERSONAL PRAYER JOURNAL</div><h1 id="homeTitle">Make a little room for your duas.</h1><p id="homeIntro">Keep the duas that matter to you close, and return to them whenever your heart needs a pause.</p></div>
 <div class="hero-card"><div class="eyebrow" style="color:#c9d6c7">A MOMENT FOR YOU</div><h2>After Salah</h2><p>A quiet moment to read the duas you’ve chosen, one by one.</p><button class="btn light" id="openAfterSalah">Open your collection <span aria-hidden="true">↗</span></button></div>
@@ -412,7 +412,7 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
   };
   function applyIntroLanguage(lang){const t=copy[lang]||copy.en;document.documentElement.lang=lang;document.getElementById('sydIntroEyebrow').textContent=t.eyebrow;document.getElementById('sydIntroTitle').textContent=t.title;document.getElementById('sydIntroCopy').textContent=t.intro;document.getElementById('sydIntroNote').textContent=t.note;document.getElementById('sydCreateAccount').textContent=t.create;document.getElementById('sydLogin').textContent=t.login;document.getElementById('sydContinueGuest').textContent=t.guest;const introFooter=document.querySelector('#sydIntro .intro-footer');if(introFooter)introFooter.textContent=lang==='id'?'Dibuat dengan penuh kasih oleh Halima Larasati ♡':'Made with care by Halima Larasati ♡';document.getElementById('sydAccountTitle').textContent=t.account;document.getElementById('sydAccountName').previousElementSibling.textContent=t.name;document.getElementById('sydAccountGender').previousElementSibling.textContent=t.gender;document.getElementById('sydAccountEmail').previousElementSibling.textContent=t.email;document.getElementById('sydAccountPassword').closest('.field').querySelector('label').textContent=t.password;document.getElementById('sydForgotPassword').textContent=t.forgot;document.getElementById('sydLoginHelpText').textContent=t.help;document.getElementById('sydContactHalima').textContent=t.contact;document.getElementById('sydAccountDisclaimer').textContent=t.disclaimer;document.getElementById('sydAccountSubmit').textContent=t.continue;document.getElementById('sydAccountBack').textContent=t.back;document.getElementById('sydAccountEyebrow').textContent=t.space;}
   function openAccount(mode){const t=copy[document.getElementById('sydIntroLanguage').value]||copy.en;document.getElementById('sydAccountTitle').textContent=mode==='login'?t.login:t.account;document.getElementById('sydNameField').style.display=mode==='login'?'none':'grid';document.getElementById('sydGenderField').style.display=mode==='login'?'none':'grid';document.getElementById('sydAccountPassword').setAttribute('autocomplete',mode==='login'?'current-password':'new-password');document.getElementById('sydAccountForm').style.display='grid';document.getElementById('sydAccountMessage').classList.remove('show');panel.classList.add('open');}
-  function updateHomeGreeting(name){const box=document.getElementById('homeGreeting');if(!box)return;let clean=(name||'').trim(),gender='sister',active=false,savedName='',lang='en',profile=null;try{savedName=(localStorage.getItem('syd_display_name')||'').trim();active=localStorage.getItem('syd_session_active')==='1';const email=(localStorage.getItem('syd_last_email')||'').trim().toLowerCase();try{profile=JSON.parse(localStorage.getItem('syd_local_profile')||'null')}catch(_){}if(profile&&profile.email&&profile.email.trim().toLowerCase()===email){if(profile.name)savedName=profile.name.trim();if(profile.gender)gender=profile.gender;}if(!profile||!profile.email||profile.email.trim().toLowerCase()!==email)gender=localStorage.getItem('syd_gender')||'sister';if(!clean&&active)clean=savedName;const selector=document.getElementById('sydIntroLanguage');const appliedSelector=document.getElementById('languageSelect');lang=(appliedSelector&&['id','en'].includes(appliedSelector.value)?appliedSelector.value:localStorage.getItem('syd_language'))||document.documentElement.lang||'en';}catch(e){lang=document.documentElement.lang||'en';}if(!['id','en'].includes(lang))lang='en';const address=gender==='brother'?'brother':'sister';const firebaseSignedIn=!!(window.__sydFirebaseUser&&window.__sydFirebaseUser.uid);const returning=firebaseSignedIn||(active&&window.__sydReturningUser===true);const title=returning?'Assalamu’alaikum, '+(clean||savedName||'')+' 💕':'Assalamu’alaikum 💕';const greeting=returning?(lang==='id'?'Aku seneng deh kamu balik lagi, '+address+' ♡':'I’m glad you’re back, '+address+' ♡'):'Welcome to your little dua space.';box.innerHTML='<p class="greeting-title"></p><p class="tiny muted" style="margin:0"></p>';box.querySelector('.greeting-title').textContent=title;box.querySelector('.tiny').textContent=greeting;}
+  function updateHomeGreeting(name){const box=document.getElementById('homeGreeting');if(!box)return;let clean=(name||'').trim(),gender='sister',active=false,savedName='',lang='en',profile=null;try{savedName=(localStorage.getItem('syd_display_name')||'').trim();active=localStorage.getItem('syd_session_active')==='1';const email=(localStorage.getItem('syd_last_email')||'').trim().toLowerCase();try{profile=JSON.parse(localStorage.getItem('syd_local_profile')||'null')}catch(_){}const firebaseProfile=window.__sydAccountProfile;if(window.__sydFirebaseUser&&window.__sydFirebaseUser.uid&&firebaseProfile&&firebaseProfile.uid===window.__sydFirebaseUser.uid){if(firebaseProfile.name)savedName=String(firebaseProfile.name).trim();if(firebaseProfile.gender==='brother'||firebaseProfile.gender==='sister')gender=firebaseProfile.gender;}else if(profile&&profile.email&&profile.email.trim().toLowerCase()===email){if(profile.name)savedName=profile.name.trim();if(profile.gender)gender=profile.gender;}else if(!window.__sydFirebaseUser){gender=localStorage.getItem('syd_gender')||'sister';}if(window.__sydFirebaseUser&&firebaseProfile&&firebaseProfile.uid===window.__sydFirebaseUser.uid){clean=savedName;}if(!clean&&active)clean=savedName;const selector=document.getElementById('sydIntroLanguage');const appliedSelector=document.getElementById('languageSelect');lang=(appliedSelector&&['id','en'].includes(appliedSelector.value)?appliedSelector.value:localStorage.getItem('syd_language'))||document.documentElement.lang||'en';}catch(e){lang=document.documentElement.lang||'en';}if(!['id','en'].includes(lang))lang='en';const address=gender==='brother'?'brother':'sister';const firebaseSignedIn=!!(window.__sydFirebaseUser&&window.__sydFirebaseUser.uid);const returning=firebaseSignedIn||(active&&window.__sydReturningUser===true);const title=returning?'Assalamu’alaikum, '+(clean||savedName||'')+' 💕':'Assalamu’alaikum 💕';const greeting=returning?(lang==='id'?'Aku seneng deh kamu balik lagi, '+address+' ♡':'I’m glad you’re back, '+address+' ♡'):'Welcome to your little dua space.';box.innerHTML='<p class="greeting-title"></p><p class="tiny muted" style="margin:0"></p>';box.querySelector('.greeting-title').textContent=title;box.querySelector('.tiny').textContent=greeting;}
   // Expose the greeting updater so the separate Firebase module can invoke it.
   window.updateHomeGreeting=updateHomeGreeting;
   const halimaPrayers=[
@@ -708,6 +708,7 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
     if(window.__sydActivateGuestState)window.__sydActivateGuestState();
     if(window.__sydFirebaseSignOut)window.__sydFirebaseSignOut().catch(e=>console.warn('Firebase sign-out failed',e));
     window.__sydFirebaseUser=null;
+    window.__sydAccountProfile=null;
     window.__sydReturningUser=false;
     const intro=document.getElementById('sydIntro');
     const panel=document.getElementById('sydAccountPanel');
@@ -729,8 +730,8 @@ if(!state.collections.length)state.collections=clone(defaultCollections);for(con
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
 import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updateProfile, signOut, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 const firebaseConfig={apiKey:"AIzaSyDuJECJYezXjc_B5i8amyCU2U7-wmsVL7s",authDomain:"save-your-dua.firebaseapp.com",projectId:"save-your-dua",storageBucket:"save-your-dua.firebasestorage.app",messagingSenderId:"164744066796",appId:"1:164744066796:web:5794f07cf3b1dc00d757c9",measurementId:"G-3S6TDXDWBX"};
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 isSupported().then(ok=>{if(ok){try{getAnalytics(app)}catch(e){}}}).catch(()=>{});
@@ -764,6 +765,8 @@ window.__sydFirebaseAccount=async ({mode,email,password,name,gender})=>{
  const profile=profileSnap.exists()?(profileSnap.data()||{}):{};
  const resolvedName=String(profile.name||user.displayName||((mode==='signup')?name:'')||'').trim();
  const resolvedGender=(profile.gender==='brother'||profile.gender==='sister')?profile.gender:((mode==='signup'&&(gender==='brother'||gender==='sister'))?gender:'sister');
+ window.__sydAccountProfile={uid:user.uid,name:resolvedName,gender:resolvedGender,email:user.email};
+ try{localStorage.setItem('syd_display_name',resolvedName);localStorage.setItem('syd_gender',resolvedGender);localStorage.setItem('syd_local_profile',JSON.stringify({name:resolvedName,gender:resolvedGender,email:user.email}));}catch(_){}
  if(!profileSnap.exists()||!profile.email){
   await setDoc(profileRef,{name:resolvedName,gender:resolvedGender,email:user.email,updatedAt:serverTimestamp()},{merge:true});
  }
@@ -801,9 +804,17 @@ onAuthStateChanged(auth,async user=>{
  }
  const email=String(user.email||'').trim().toLowerCase();
  try{
+  const profileSnap=await getDoc(doc(db,'users',user.uid));
+  if(!auth.currentUser||auth.currentUser.uid!==user.uid)return;
+  const accountProfile=profileSnap.exists()?(profileSnap.data()||{}):{};
+  const accountName=String(accountProfile.name||user.displayName||'').trim();
+  const accountGender=(accountProfile.gender==='brother'||accountProfile.gender==='sister')?accountProfile.gender:'sister';
+  window.__sydAccountProfile={uid:user.uid,name:accountName,gender:accountGender,email:user.email||''};
+  localStorage.setItem('syd_display_name',accountName);localStorage.setItem('syd_gender',accountGender);
+  localStorage.setItem('syd_local_profile',JSON.stringify({name:accountName,gender:accountGender,email:user.email||''}));
   localStorage.setItem('syd_session_active','1');
   localStorage.setItem('syd_last_email',email);
-  if(user.displayName)localStorage.setItem('syd_display_name',user.displayName);
+  if(!accountName&&user.displayName)localStorage.setItem('syd_display_name',user.displayName);
   // Restore this authenticated UID's cloud data before showing the account UI.
   const snap=await getDoc(doc(db,'users',user.uid,'private','appData'));
   // V88: a delayed response from a previous account must never hydrate the current UI.
@@ -821,9 +832,10 @@ onAuthStateChanged(auth,async user=>{
   // Previously updateHomeGreeting ran first, so it saw __sydReturningUser !== true and
   // permanently rendered the first-visit welcome text until another event refreshed it.
   window.__sydReturningUser=true;
-  try{if(typeof renderAll==='function')renderAll();if(typeof window.updateHomeGreeting==='function')window.updateHomeGreeting(localStorage.getItem('syd_display_name')||user.displayName||'');}catch(e){console.warn('Could not refresh returning greeting:',e)}
+  try{if(typeof renderAll==='function')renderAll();if(typeof window.updateHomeGreeting==='function')window.updateHomeGreeting(accountName);}catch(e){console.warn('Could not refresh returning greeting:',e)}
   const intro=document.getElementById('sydIntro'),panel=document.getElementById('sydAccountPanel');
   if(intro)intro.style.display='none';if(panel)panel.classList.remove('open');document.body.classList.remove('onboarding-active');
+  document.dispatchEvent(new CustomEvent('syd:app-entered'));
  }catch(e){
   console.error('Could not safely restore account data:',e);
   // A stale callback must not reset the state of a newer account.
@@ -857,7 +869,7 @@ if(guestBtn)guestBtn.addEventListener('click',async ev=>{
  const panel=$('profilePanel'), chip=$('profileChip');
  function profile(){
   let email='',name='',gender='sister',signed=false;
-  try{email=(window.__sydFirebaseUser&&window.__sydFirebaseUser.email)||'';signed=!!(window.__sydFirebaseUser&&window.__sydFirebaseUser.uid);const p=JSON.parse(localStorage.getItem('syd_local_profile')||'null');if(signed){name=(p&&p.email&&p.email.toLowerCase()===email.toLowerCase()?p.name:'')||localStorage.getItem('syd_display_name')||'';gender=(p&&p.email&&p.email.toLowerCase()===email.toLowerCase()?p.gender:'sister')||'sister';}else{name='';email='';}}catch(e){}
+  try{email=(window.__sydFirebaseUser&&window.__sydFirebaseUser.email)||'';signed=!!(window.__sydFirebaseUser&&window.__sydFirebaseUser.uid);const p=JSON.parse(localStorage.getItem('syd_local_profile')||'null');const fp=window.__sydAccountProfile;if(signed){name=(fp&&fp.uid===(window.__sydFirebaseUser&&window.__sydFirebaseUser.uid)?fp.name:'')||(p&&p.email&&p.email.toLowerCase()===email.toLowerCase()?p.name:'')||localStorage.getItem('syd_display_name')||'';gender=(fp&&fp.uid===(window.__sydFirebaseUser&&window.__sydFirebaseUser.uid)?fp.gender:(p&&p.email&&p.email.toLowerCase()===email.toLowerCase()?p.gender:'sister'))||'sister';}else{name='';email='';}}catch(e){}
   const idLang=((document.getElementById('languageSelect')||{}).value||document.documentElement.lang)==='id';
   const label=signed?(name||email||'Akun'):(idLang?'Tamu':'Guest');
   if($('profileChipText'))$('profileChipText').textContent=label;
@@ -868,6 +880,7 @@ if(guestBtn)guestBtn.addEventListener('click',async ev=>{
   if($('profileLoginBtn'))$('profileLoginBtn').classList.toggle('hidden',signed);
   if($('profileSignupBtn'))$('profileSignupBtn').classList.toggle('hidden',signed);
   if($('profileLogoutBtn'))$('profileLogoutBtn').classList.toggle('hidden',!signed);
+  if($('profileDeleteBtn'))$('profileDeleteBtn').classList.toggle('hidden',!signed);if($('profileDeleteBtn'))$('profileDeleteBtn').textContent=idLang?'Hapus akun':'Delete account';
  }
  if(chip)chip.addEventListener('click',()=>{profile();panel&&panel.classList.add('open')});
  if($('closeProfilePanel'))$('closeProfilePanel').addEventListener('click',()=>panel.classList.remove('open'));
@@ -875,6 +888,43 @@ if(guestBtn)guestBtn.addEventListener('click',async ev=>{
  if($('profileLoginBtn'))$('profileLoginBtn').addEventListener('click',()=>{panel.classList.remove('open');if(typeof openAccount==='function')openAccount('login');else{const intro=$('sydIntro');if(intro)intro.style.display='flex';document.body.classList.add('onboarding-active')}});
  if($('profileSignupBtn'))$('profileSignupBtn').addEventListener('click',()=>{panel.classList.remove('open');if(typeof openAccount==='function')openAccount('signup');else{const intro=$('sydIntro');if(intro)intro.style.display='flex';document.body.classList.add('onboarding-active')}});
  if($('profileLogoutBtn'))$('profileLogoutBtn').addEventListener('click',()=>{panel.classList.remove('open');$('logoutBtn')&&$('logoutBtn').click()});
+ if($('profileDeleteBtn'))$('profileDeleteBtn').addEventListener('click',async()=>{
+  const user=window.__sydFirebaseUser;
+  if(!user||!user.uid)return;
+  const idLang=((document.getElementById('languageSelect')||{}).value||document.documentElement.lang)==='id';
+  const warning=idLang?'Hapus akun secara permanen? Semua doa dan data akun yang tersimpan di cloud akan dihapus. Tindakan ini tidak bisa dibatalkan.':'Permanently delete your account? All duas and account data stored in the cloud will be deleted. This cannot be undone.';
+  if(!window.confirm(warning))return;
+  const btn=$('profileDeleteBtn');if(btn){btn.disabled=true;btn.textContent=idLang?'Menghapus…':'Deleting…';}
+  try{
+   const current=auth.currentUser;
+   if(!current||current.uid!==user.uid)throw new Error('Sesi akun berubah. Silakan masuk kembali.');
+   await deleteDoc(doc(db,'users',user.uid,'private','appData'));
+   await deleteDoc(doc(db,'users',user.uid));
+   await deleteUser(current);
+   try{
+    localStorage.removeItem('saveYourDua.account.uid.v2.'+encodeURIComponent(String(user.uid).trim()));
+    localStorage.setItem('syd_session_active','0');
+    localStorage.removeItem('syd_local_profile');
+    localStorage.removeItem('syd_display_name');
+    localStorage.removeItem('syd_last_email');
+    localStorage.removeItem('syd_gender');
+   }catch(_){}
+   window.__sydFirebaseUser=null;window.__sydAccountProfile=null;window.__sydReturningUser=false;
+   if(window.__sydActivateGuestState)window.__sydActivateGuestState();
+   panel&&panel.classList.remove('open');
+   const intro=$('sydIntro');if(intro)intro.style.display='flex';
+   document.body.classList.add('onboarding-active');
+   alert(idLang?'Akun berhasil dihapus.':'Your account has been deleted.');
+  }catch(err){
+   console.error('Account deletion failed:',err);
+   if(err&&err.code==='auth/requires-recent-login'){
+    alert(idLang?'Demi keamanan, silakan keluar lalu masuk kembali, kemudian ulangi penghapusan akun.':'For security, please sign out and sign in again, then retry account deletion.');
+   }else{
+    alert((idLang?'Akun belum berhasil dihapus: ':'Account could not be deleted: ')+(err&&err.message?err.message:'Unknown error'));
+   }
+  }finally{if(btn){btn.disabled=false;btn.textContent=idLang?'Hapus akun':'Delete account';}}
+ });
+
  const oldRender=window.renderAll;
  // Profile status is refreshed after account/guest transitions and on initial load.
  const refresh=()=>{profile();};
@@ -957,7 +1007,6 @@ if(guestBtn)guestBtn.addEventListener('click',async ev=>{
   if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
     window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(err=>console.warn('Save Your Dua offline support could not be registered:',err)));
   }
-  window.addEventListener('load',()=>setTimeout(showFirstVisitAnnouncement,1200));
   document.addEventListener('syd:app-entered',()=>setTimeout(showFirstVisitAnnouncement,700));
 })();
 </script>
